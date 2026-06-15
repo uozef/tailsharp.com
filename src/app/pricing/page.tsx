@@ -111,7 +111,7 @@ export default function TailSharpPricing() {
   const money = (n: number) => "$" + n.toLocaleString("en-AU", { maximumFractionDigits: 0 });
 
   return (
-    <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", padding: "32px 22px", borderRadius: 16 }}>
+    <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", padding: "32px 22px", minHeight: "100vh" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
         .tsmono { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
