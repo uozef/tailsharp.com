@@ -363,19 +363,19 @@ async function upsertMarket(m: GammaMarket, eventId: string | null): Promise<voi
       JSON.stringify(outcomePrices),
       parseFloat(m.volume) || 0,
       parseFloat(m.liquidity) || 0,
-      parseFloat(m.bestBid) || null,
-      parseFloat(m.bestAsk) || null,
-      m.active,
-      m.closed,
+      m.bestBid != null ? parseFloat(m.bestBid) || 0 : null,
+      m.bestAsk != null ? parseFloat(m.bestAsk) || 0 : null,
+      m.active ?? true,
+      m.closed ?? false,
       m.endDate ? new Date(m.endDate) : null,
-      m.groupItemTitle || null,
-      m.conditionId || null,
+      m.groupItemTitle ?? null,
+      m.conditionId ?? null,
     ],
   );
 
   // Record price snapshot
   if (outcomePrices.length > 0) {
-    const price = parseFloat(outcomePrices[0]) || null;
+    const price = outcomePrices[0] != null ? parseFloat(outcomePrices[0]) || 0 : null;
     if (price !== null) {
       await pool.execute(
         `INSERT INTO intel_price_history (market_id, price, timestamp) VALUES (?, ?, NOW())`,
