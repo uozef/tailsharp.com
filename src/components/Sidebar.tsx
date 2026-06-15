@@ -73,7 +73,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <nav className={`mt-4 flex flex-1 flex-col gap-1 ${collapsed ? "items-center px-2" : "px-3"}`}>
         {navItems.map((item) => {
           const isActive =
-            pathname === item.href || pathname?.startsWith(item.href + "/");
+            pathname === item.href || (pathname?.startsWith(item.href + "/") && !navItems.some(n => n.href !== item.href && n.href.startsWith(item.href + "/") && pathname?.startsWith(n.href)));
           return (
             <Link
               key={item.href}
