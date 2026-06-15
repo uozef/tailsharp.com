@@ -487,7 +487,7 @@ export default function ScenarioLabPage() {
 
         {/* Selected Event Card */}
         {selectedEvent && (
-          <div className="mt-4 rounded-lg border border-blue-500/30 bg-[#0f172a] p-4">
+          <div className="mt-4 rounded-lg border border-blue-500/30 bg-surface p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-blue-400">Selected Event</p>
@@ -549,7 +549,7 @@ export default function ScenarioLabPage() {
       {selectedScenario && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           {/* Column 1: Macro Impact Analysis */}
-          <div className="rounded-xl border border-card-border bg-[#0f172a] p-5">
+          <div className="rounded-xl border border-card-border bg-surface p-5">
             <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
               <BarChart3 className="h-4 w-4 text-blue-400" />
               Macro Impact Analysis
@@ -588,7 +588,7 @@ export default function ScenarioLabPage() {
           </div>
 
           {/* Column 2: Chain Reaction Map */}
-          <div className="rounded-xl border border-card-border bg-[#0f172a] p-5">
+          <div className="rounded-xl border border-card-border bg-surface p-5">
             <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
               <Zap className="h-4 w-4 text-amber-400" />
               Cascading Effects
@@ -615,7 +615,7 @@ export default function ScenarioLabPage() {
                     </div>
 
                     {/* Effect node */}
-                    <div className="rounded-lg border border-card-border bg-[#1e293b] p-3">
+                    <div className="rounded-lg border border-card-border bg-surface-inset p-3">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">
                         Then
                       </p>
@@ -642,7 +642,7 @@ export default function ScenarioLabPage() {
           </div>
 
           {/* Column 3: Portfolio Action */}
-          <div className="rounded-xl border border-card-border bg-[#0f172a] p-5">
+          <div className="rounded-xl border border-card-border bg-surface p-5">
             <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold text-foreground">
               <Shield className="h-4 w-4 text-emerald-400" />
               Fund Positioning
@@ -754,7 +754,7 @@ export default function ScenarioLabPage() {
 
       {/* ─── SECTION 5: Simulation Summary ─── */}
       {selectedScenario && selectedEvent && (
-        <div className="rounded-xl border border-blue-500/20 bg-[#0f172a] p-5">
+        <div className="rounded-xl border border-blue-500/20 bg-surface p-5">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
             <TrendingUp className="h-4 w-4 text-blue-400" />
             Simulation Summary
