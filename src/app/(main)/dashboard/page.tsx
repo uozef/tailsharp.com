@@ -219,7 +219,7 @@ export default function DashboardPage() {
                 <th className="pb-3 pr-4 font-medium">Name</th>
                 <th className="pb-3 pr-4 text-right font-medium">Volume</th>
                 <th className="pb-3 pr-4 text-right font-medium">PnL</th>
-                <th className="pb-3 text-right font-medium">ROI</th>
+                <th className="pb-3 text-right font-medium">ROI <span className="font-normal text-[10px] text-muted">(All-Time)</span></th>
               </tr>
             </thead>
             <tbody>

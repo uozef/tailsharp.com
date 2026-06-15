@@ -59,7 +59,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           onClick={onToggle}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800 hover:text-white"
         >
-          {collapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+          <Menu className="h-5 w-5" />
         </button>
       </div>
 

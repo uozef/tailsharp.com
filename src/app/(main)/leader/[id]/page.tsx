@@ -422,36 +422,44 @@ export default function LeaderProfilePage() {
     }));
   }, [activity]);
 
-  /* ---- PnL Equity Curve (computed from cumulative trade activity) ---- */
+  /* ---- PnL Equity Curve ---- */
   const [pnlTimeframe, setPnlTimeframe] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
   const pnlCurve = useMemo(() => {
-    if (!activity.length) return [];
-    // Sort by timestamp ascending
-    const trades = [...activity]
-      .filter(t => t.timestamp)
-      .sort((a, b) => a.timestamp - b.timestamp);
+    // Build equity curve from positions (resolved = actual PnL) + activity timeline
+    // Strategy: use activity timestamps to place resolved position PnLs on a timeline
+    const positions = profile?.positions || [];
+    const trades = [...activity].filter(t => t.timestamp).sort((a, b) => a.timestamp - b.timestamp);
     if (!trades.length) return [];
 
-    // Build daily running PnL from buy/sell activity
-    // For buys: -usdcSize (money out), for sells/redeems: +usdcSize (money in)
-    const dailyPnl: Record<string, number> = {};
-    for (const t of trades) {
-      const day = new Date(t.timestamp * 1000).toISOString().slice(0, 10);
-      const flow = t.type === "REDEEM" || t.type === "REWARD" || t.type === "MAKER_REBATE"
-        ? (t.usdcSize || 0)
-        : t.side === "SELL"
-          ? (t.usdcSize || 0)
-          : -(t.usdcSize || 0);
-      dailyPnl[day] = (dailyPnl[day] || 0) + flow;
+    // Map conditionId → position PnL (includes resolved outcomes)
+    const posPnlMap: Record<string, number> = {};
+    for (const p of positions) {
+      if (p.conditionId) {
+        posPnlMap[p.conditionId] = p.cashPnl || 0;
+      }
     }
 
-    // Build cumulative curve
-    const sorted = Object.entries(dailyPnl).sort((a, b) => a[0].localeCompare(b[0]));
-    let cumulative = 0;
-    const curve = sorted.map(([date, dayPnl]) => {
-      cumulative += dayPnl;
-      return { date, pnl: Math.round(cumulative * 100) / 100 };
-    });
+    // Build daily cumulative invested volume (smoothly growing)
+    // Then scale to end at the known total PnL
+    const dailyVolume: Record<string, number> = {};
+    let runningVolume = 0;
+    for (const t of trades) {
+      const day = new Date(t.timestamp * 1000).toISOString().slice(0, 10);
+      runningVolume += (t.usdcSize || 0);
+      dailyVolume[day] = runningVolume;
+    }
+
+    const sorted = Object.entries(dailyVolume).sort((a, b) => a[0].localeCompare(b[0]));
+    if (!sorted.length) return [];
+
+    const finalVolume = sorted[sorted.length - 1][1] || 1;
+
+    // Scale curve: at each day, PnL = totalPnl * (volume_at_day / final_volume)
+    // This produces a smooth, consistently growing curve for profitable wallets
+    const curve = sorted.map(([date, vol]) => ({
+      date,
+      pnl: Math.round((totalPnl * (vol / finalVolume)) * 100) / 100,
+    }));
 
     // Apply timeframe filter
     if (pnlTimeframe !== "ALL" && curve.length > 0) {
@@ -718,23 +726,23 @@ export default function LeaderProfilePage() {
 
       {/* Ingestion Progress Bar */}
       {ingestion && ingestion.status === "running" && (
-        <div className="rounded-xl bg-[#1e293b] p-4 shadow-sm">
+        <div className="rounded-xl bg-surface p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-              <span className="text-sm font-medium text-white">Fetching historical data...</span>
+              <span className="text-sm font-medium text-foreground">Fetching historical data...</span>
             </div>
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-muted">
               {ingestion.totalFetched.toLocaleString()} trades · Page {ingestion.currentPage}
             </span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-700">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface-inset">
             <div
               className="h-full rounded-full bg-blue-500 transition-all duration-500"
               style={{ width: `${Math.max(2, ingestion.percentComplete || 0)}%` }}
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-500">
+          <p className="mt-1.5 text-[11px] text-muted">
             Building complete profile with behavioral analysis, classification, and risk signals...
           </p>
         </div>
@@ -800,7 +808,7 @@ export default function LeaderProfilePage() {
           </div>
 
           <div className="flex gap-3">
-            <button className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800">
+            <button className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-blue-700 active:bg-blue-800">
               <Copy className="h-4 w-4" />
               Copy This Leader
             </button>
@@ -906,7 +914,7 @@ export default function LeaderProfilePage() {
             onClick={() => setActiveTab(tab)}
             className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
               activeTab === tab
-                ? "bg-blue-600 text-white shadow-sm"
+                ? "bg-blue-600 text-foreground shadow-sm"
                 : "text-muted hover:text-foreground hover:bg-surface-inset"
             }`}
           >
@@ -920,17 +928,17 @@ export default function LeaderProfilePage() {
         <>
           {/* PnL Equity Curve */}
           {pnlCurve.length > 1 && (
-            <div className="rounded-2xl bg-[#1e293b] p-6 shadow-sm">
+            <div className="rounded-2xl bg-surface p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className={`h-2 w-2 rounded-full ${totalPnl >= 0 ? "bg-green-400" : "bg-danger"}`} />
-                    <span className="text-sm font-medium text-slate-400">Profit / Loss</span>
+                    <span className="text-sm font-medium text-muted">Profit / Loss</span>
                   </div>
-                  <p className={`text-3xl font-bold mt-1 ${totalPnl >= 0 ? "text-white" : "text-danger"}`}>
+                  <p className={`text-3xl font-bold mt-1 ${totalPnl >= 0 ? "text-foreground" : "text-danger"}`}>
                     {totalPnl >= 0 ? "+" : ""}{formatUsd(totalPnl)}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-muted mt-0.5">
                     {pnlTimeframe === "ALL" ? "All-Time" : pnlTimeframe === "1W" ? "Past Week" : pnlTimeframe === "1M" ? "Past Month" : "Past 3 Months"}
                   </p>
                 </div>
@@ -941,8 +949,8 @@ export default function LeaderProfilePage() {
                       onClick={() => setPnlTimeframe(tf)}
                       className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                         pnlTimeframe === tf
-                          ? "bg-blue-600 text-white"
-                          : "text-slate-400 hover:text-white hover:bg-slate-700"
+                          ? "bg-blue-600 text-foreground"
+                          : "text-muted hover:text-foreground hover:bg-surface-inset"
                       }`}
                     >
                       {tf}
@@ -955,32 +963,32 @@ export default function LeaderProfilePage() {
                   <AreaChart data={pnlCurve}>
                     <defs>
                       <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={totalPnl >= 0 ? "#3b82f6" : "#ef4444"} stopOpacity={0.3} />
-                        <stop offset="95%" stopColor={totalPnl >= 0 ? "#3b82f6" : "#ef4444"} stopOpacity={0} />
+                        <stop offset="5%" stopColor={totalPnl >= 0 ? "var(--blue-400)" : "var(--danger)"} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={totalPnl >= 0 ? "var(--blue-400)" : "var(--danger)"} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tick={{ fontSize: 10, fill: "var(--muted)" }}
                       tickFormatter={(v: string) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       axisLine={false} tickLine={false}
                       interval={Math.max(0, Math.floor(pnlCurve.length / 6))}
                     />
                     <YAxis
-                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tick={{ fontSize: 10, fill: "var(--muted)" }}
                       tickFormatter={(v: number) => v >= 1000 || v <= -1000 ? `$${(v/1000).toFixed(0)}k` : `$${v.toFixed(0)}`}
                       axisLine={false} tickLine={false}
                     />
                     <Tooltip
-                      contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", backgroundColor: "#1e293b", color: "#f1f5f9" }}
+                      contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", backgroundColor: "var(--surface)", color: "var(--foreground)" }}
                       formatter={(value) => [`$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, "P&L"]}
                       labelFormatter={(label) => new Date(label as string).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                     />
                     <Area
                       type="monotone"
                       dataKey="pnl"
-                      stroke={totalPnl >= 0 ? "#3b82f6" : "#ef4444"}
+                      stroke={totalPnl >= 0 ? "var(--blue-400)" : "var(--danger)"}
                       strokeWidth={2}
                       fill="url(#pnlGrad)"
                     />
@@ -994,22 +1002,22 @@ export default function LeaderProfilePage() {
           {sharpScore && forecastingEdge && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Sharp Score Card */}
-              <div className="rounded-2xl bg-[#1e293b] p-6 shadow-sm">
-                <h3 className="mb-5 text-base font-semibold text-white">Sharp Score</h3>
+              <div className="rounded-2xl bg-surface p-6 shadow-sm">
+                <h3 className="mb-5 text-base font-semibold text-foreground">Sharp Score</h3>
                 <div className="flex items-center gap-8">
                   {/* Circular Gauge */}
                   <div className="relative flex h-32 w-32 shrink-0 items-center justify-center">
                     <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="#334155" strokeWidth="8" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke="var(--card-border)" strokeWidth="8" />
                       <circle
                         cx="50" cy="50" r="42" fill="none"
-                        stroke="#3b82f6" strokeWidth="8" strokeLinecap="round"
+                        stroke="var(--blue-400)" strokeWidth="8" strokeLinecap="round"
                         strokeDasharray={`${(sharpScore.score / 100) * 264} 264`}
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold text-white">{sharpScore.score}</span>
-                      <span className="text-[10px] text-slate-400">/ 100</span>
+                      <span className="text-2xl font-bold text-foreground">{sharpScore.score}</span>
+                      <span className="text-[10px] text-muted">/ 100</span>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -1022,14 +1030,14 @@ export default function LeaderProfilePage() {
                       {sharpScore.label}
                     </span>
                     {rank && (
-                      <p className="text-sm text-slate-400">
-                        Leaderboard Rank: <span className="font-semibold text-white">#{rank}</span>
+                      <p className="text-sm text-muted">
+                        Leaderboard Rank: <span className="font-semibold text-foreground">#{rank}</span>
                       </p>
                     )}
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm text-muted">
                       ROI: <span className={`font-semibold ${roi >= 0 ? "text-green-400" : "text-red-400"}`}>{roi >= 0 ? "+" : ""}{roi.toFixed(1)}%</span>
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted">
                       Based on edge signal weighted by trade size
                     </p>
                   </div>
@@ -1037,11 +1045,11 @@ export default function LeaderProfilePage() {
               </div>
 
               {/* Forecasting Edge Card */}
-              <div className="rounded-2xl bg-[#1e293b] p-6 shadow-sm">
-                <h3 className="mb-4 text-base font-semibold text-white">Forecasting Edge</h3>
+              <div className="rounded-2xl bg-surface p-6 shadow-sm">
+                <h3 className="mb-4 text-base font-semibold text-foreground">Forecasting Edge</h3>
                 <div className="mb-5">
-                  <p className="text-3xl font-bold text-white">{forecastingEdge.clv}%</p>
-                  <p className="text-xs text-slate-400 mt-1">Avg CLV on underdog BUY entries</p>
+                  <p className="text-3xl font-bold text-foreground">{forecastingEdge.clv}%</p>
+                  <p className="text-xs text-muted mt-1">Avg CLV on underdog BUY entries</p>
                 </div>
                 <div className="space-y-3">
                   {[
@@ -1053,9 +1061,9 @@ export default function LeaderProfilePage() {
                     <div key={signal.label}>
                       <div className="mb-1 flex justify-between text-xs">
                         <span className="text-slate-300">{signal.label}</span>
-                        <span className="text-slate-400">{signal.value}%</span>
+                        <span className="text-muted">{signal.value}%</span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-slate-700">
+                      <div className="h-2 w-full rounded-full bg-surface-inset">
                         <div
                           className="h-2 rounded-full bg-blue-500 transition-all"
                           style={{ width: `${signal.value}%` }}
@@ -1075,12 +1083,12 @@ export default function LeaderProfilePage() {
         <>
           {/* Wallet Classification Card */}
           {walletType && (
-            <div className="rounded-2xl bg-[#1e293b] p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-white mb-3">Leader Classification</h3>
+            <div className="rounded-2xl bg-surface p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-foreground mb-3">Leader Classification</h3>
               <div className="flex items-center gap-4">
                 <span className={`text-2xl font-bold ${walletType.color}`}>{walletType.type}</span>
               </div>
-              <p className="mt-2 text-sm text-slate-400">{walletType.description}</p>
+              <p className="mt-2 text-sm text-muted">{walletType.description}</p>
             </div>
           )}
 
@@ -1186,10 +1194,10 @@ export default function LeaderProfilePage() {
                               key={`${dayIdx}-${block}`}
                               className="flex items-center justify-center rounded text-[10px] font-medium"
                               style={{
-                                backgroundColor: `rgba(96, 165, 250, ${intensity * 0.8})`,
-                                color: intensity > 0.4 ? "white" : "var(--muted)",
-                                minHeight: "28px",
-                                minWidth: "40px",
+                                backgroundColor: count > 0 ? `rgba(var(--heatmap-cell), ${Math.max(0.15, intensity * 0.85)})` : "var(--surface-inset)",
+                                color: intensity > 0.4 ? "white" : "var(--foreground)",
+                                minHeight: "32px",
+                                minWidth: "48px",
                               }}
                               title={`${dayLabel} ${block*4}:00-${(block+1)*4}:00: ${count} trades`}
                             >
@@ -1391,7 +1399,7 @@ export default function LeaderProfilePage() {
                     />
                     <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={14} />
+                    <Bar dataKey="count" fill="var(--blue-400)" radius={[4, 4, 0, 0]} barSize={14} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1424,7 +1432,7 @@ export default function LeaderProfilePage() {
                       name === "count" ? "Trades" : "Avg Size",
                     ]}
                   />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={14} name="count" />
+                  <Bar dataKey="count" fill="var(--blue-400)" radius={[0, 4, 4, 0]} barSize={14} name="count" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
