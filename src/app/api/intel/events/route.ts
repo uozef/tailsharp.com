@@ -48,10 +48,8 @@ export async function GET(request: NextRequest) {
         orderBy = "e.volume DESC";
     }
 
-    params.push(limit);
-
     const [events] = await pool.execute(
-      `SELECT e.* FROM intel_events e ${where} ORDER BY ${orderBy} LIMIT ?`,
+      `SELECT e.* FROM intel_events e ${where} ORDER BY ${orderBy} LIMIT ${limit}`,
       params,
     );
 
