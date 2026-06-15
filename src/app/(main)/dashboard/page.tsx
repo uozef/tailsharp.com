@@ -181,11 +181,12 @@ export default function DashboardPage() {
               <Tooltip
                 contentStyle={{
                   borderRadius: "12px",
-                  border: "none",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  border: "1px solid var(--card-border)",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
                   backgroundColor: "var(--surface)",
                   color: "var(--foreground)",
                 }}
+                cursor={{ fill: "var(--surface-inset)", opacity: 0.5 }}
                 formatter={(value) => [
                   `$${Number(value).toLocaleString()}`,
                   "PnL",
