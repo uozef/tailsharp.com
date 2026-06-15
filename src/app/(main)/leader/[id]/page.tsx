@@ -21,6 +21,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -420,6 +422,49 @@ export default function LeaderProfilePage() {
     }));
   }, [activity]);
 
+  /* ---- PnL Equity Curve (computed from cumulative trade activity) ---- */
+  const [pnlTimeframe, setPnlTimeframe] = useState<"1W" | "1M" | "3M" | "ALL">("ALL");
+  const pnlCurve = useMemo(() => {
+    if (!activity.length) return [];
+    // Sort by timestamp ascending
+    const trades = [...activity]
+      .filter(t => t.timestamp)
+      .sort((a, b) => a.timestamp - b.timestamp);
+    if (!trades.length) return [];
+
+    // Build daily running PnL from buy/sell activity
+    // For buys: -usdcSize (money out), for sells/redeems: +usdcSize (money in)
+    const dailyPnl: Record<string, number> = {};
+    for (const t of trades) {
+      const day = new Date(t.timestamp * 1000).toISOString().slice(0, 10);
+      const flow = t.type === "REDEEM" || t.type === "REWARD" || t.type === "MAKER_REBATE"
+        ? (t.usdcSize || 0)
+        : t.side === "SELL"
+          ? (t.usdcSize || 0)
+          : -(t.usdcSize || 0);
+      dailyPnl[day] = (dailyPnl[day] || 0) + flow;
+    }
+
+    // Build cumulative curve
+    const sorted = Object.entries(dailyPnl).sort((a, b) => a[0].localeCompare(b[0]));
+    let cumulative = 0;
+    const curve = sorted.map(([date, dayPnl]) => {
+      cumulative += dayPnl;
+      return { date, pnl: Math.round(cumulative * 100) / 100 };
+    });
+
+    // Apply timeframe filter
+    if (pnlTimeframe !== "ALL" && curve.length > 0) {
+      const now = new Date(curve[curve.length - 1].date);
+      const days = pnlTimeframe === "1W" ? 7 : pnlTimeframe === "1M" ? 30 : 90;
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - days);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      return curve.filter(p => p.date >= cutoffStr);
+    }
+    return curve;
+  }, [activity, pnlTimeframe]);
+
   /* ---- Behavioral Profile (computed from trades) ---- */
   const behavioralProfile = useMemo(() => {
     if (!activity.length) return null;
@@ -705,17 +750,11 @@ export default function LeaderProfilePage() {
       <div className="rounded-2xl bg-surface p-8 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-5">
-            {profileImage ? (
-              <img
-                src={profileImage}
-                alt={displayName}
-                className="h-16 w-16 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-surface-inset text-xl font-bold text-muted">
-                {displayName.slice(0, 2).toUpperCase()}
-              </div>
-            )}
+            <img
+              src={profileImage || `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(displayName || walletAddress)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+              alt={displayName}
+              className="h-16 w-16 shrink-0 rounded-full object-cover bg-surface-inset"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-foreground">
@@ -811,35 +850,52 @@ export default function LeaderProfilePage() {
             value: openPositions.toLocaleString(),
             icon: <Activity className="h-4 w-4" />,
             color: "text-foreground",
-            tab: "analysis" as const,
+            href: `https://polymarket.com/profile/${walletAddress}`,
           },
           {
             label: "Total Positions",
             value: totalPositions.toLocaleString(),
             icon: <BarChart3 className="h-4 w-4" />,
             color: "text-foreground",
-            tab: "analysis" as const,
+            href: `https://polymarket.com/profile/${walletAddress}`,
           },
           {
             label: "Trades",
             value: (analysis?.totalTrades ?? activity.length).toLocaleString(),
             icon: <Activity className="h-4 w-4" />,
             color: "text-foreground",
-            tab: "history" as const,
+            href: `https://polymarket.com/profile/${walletAddress}?tab=trade-history`,
           },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            onClick={() => { if ("tab" in stat && stat.tab) setActiveTab(stat.tab); }}
-            className={`rounded-xl bg-surface p-5 text-center shadow-sm ${"tab" in stat && stat.tab ? "cursor-pointer transition-colors hover:bg-surface-inset hover:ring-1 hover:ring-blue-400/30" : ""}`}
-          >
-            <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-surface-inset text-muted">
-              {stat.icon}
+        ].map((stat) => {
+          const inner = (
+            <>
+              <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-surface-inset text-muted">
+                {stat.icon}
+              </div>
+              <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
+              <p className="text-xs text-muted">{stat.label}</p>
+            </>
+          );
+          if ("href" in stat && stat.href) {
+            return (
+              <a
+                key={stat.label}
+                href={stat.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl bg-surface p-5 text-center shadow-sm cursor-pointer transition-colors hover:bg-surface-inset hover:ring-1 hover:ring-blue-400/30"
+              >
+                {inner}
+                <p className="mt-1 text-[10px] text-blue-400 flex items-center justify-center gap-1">View on Polymarket <ExternalLink className="h-2.5 w-2.5" /></p>
+              </a>
+            );
+          }
+          return (
+            <div key={stat.label} className="rounded-xl bg-surface p-5 text-center shadow-sm">
+              {inner}
             </div>
-            <p className={`text-lg font-bold ${stat.color}`}>{stat.value}</p>
-            <p className="text-xs text-muted">{stat.label}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ===== Tabs ===== */}
@@ -862,6 +918,78 @@ export default function LeaderProfilePage() {
       {/* ===== Overview Tab ===== */}
       {activeTab === "overview" && (
         <>
+          {/* PnL Equity Curve */}
+          {pnlCurve.length > 1 && (
+            <div className="rounded-2xl bg-[#1e293b] p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${totalPnl >= 0 ? "bg-green-400" : "bg-danger"}`} />
+                    <span className="text-sm font-medium text-slate-400">Profit / Loss</span>
+                  </div>
+                  <p className={`text-3xl font-bold mt-1 ${totalPnl >= 0 ? "text-white" : "text-danger"}`}>
+                    {totalPnl >= 0 ? "+" : ""}{formatUsd(totalPnl)}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {pnlTimeframe === "ALL" ? "All-Time" : pnlTimeframe === "1W" ? "Past Week" : pnlTimeframe === "1M" ? "Past Month" : "Past 3 Months"}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  {(["1W", "1M", "3M", "ALL"] as const).map(tf => (
+                    <button
+                      key={tf}
+                      onClick={() => setPnlTimeframe(tf)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                        pnlTimeframe === tf
+                          ? "bg-blue-600 text-white"
+                          : "text-slate-400 hover:text-white hover:bg-slate-700"
+                      }`}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={pnlCurve}>
+                    <defs>
+                      <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={totalPnl >= 0 ? "#3b82f6" : "#ef4444"} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={totalPnl >= 0 ? "#3b82f6" : "#ef4444"} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tickFormatter={(v: string) => new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      axisLine={false} tickLine={false}
+                      interval={Math.max(0, Math.floor(pnlCurve.length / 6))}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: "#64748b" }}
+                      tickFormatter={(v: number) => v >= 1000 || v <= -1000 ? `$${(v/1000).toFixed(0)}k` : `$${v.toFixed(0)}`}
+                      axisLine={false} tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", backgroundColor: "#1e293b", color: "#f1f5f9" }}
+                      formatter={(value) => [`$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, "P&L"]}
+                      labelFormatter={(label) => new Date(label as string).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="pnl"
+                      stroke={totalPnl >= 0 ? "#3b82f6" : "#ef4444"}
+                      strokeWidth={2}
+                      fill="url(#pnlGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
           {/* Sharpness Analytics Cards */}
           {sharpScore && forecastingEdge && (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -1331,11 +1459,28 @@ export default function LeaderProfilePage() {
                     <th className="pb-3 pr-4">Outcome</th>
                     <th className="pb-3 pr-4">Price</th>
                     <th className="pb-3 pr-4">Size (USDC)</th>
+                    <th className="pb-3 pr-4">Result</th>
                     <th className="pb-3">Type</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-card-border">
-                  {activity.map((trade, idx) => (
+                  {activity.map((trade, idx) => {
+                    // Determine win/lose result
+                    let result: "WIN" | "LOSS" | "OPEN" | "—" = "—";
+                    if (trade.type === "REDEEM") {
+                      result = "WIN";
+                    } else if (trade.type === "TRADE") {
+                      // Check if this market exists in positions (resolved)
+                      const pos = profile?.positions?.find(
+                        (p: any) => p.conditionId === trade.conditionId
+                      );
+                      if (pos) {
+                        if (pos.curPrice === 1 || (pos.cashPnl > 0)) result = "WIN";
+                        else if (pos.curPrice === 0 || pos.redeemable) result = "LOSS";
+                        else result = "OPEN";
+                      }
+                    }
+                    return (
                     <tr key={`${trade.transactionHash}-${idx}`} className="text-foreground">
                       <td className="whitespace-nowrap py-3 pr-4 text-xs text-muted">
                         {trade.timestamp
@@ -1350,17 +1495,19 @@ export default function LeaderProfilePage() {
                           className={`rounded px-2 py-0.5 text-xs font-medium ${
                             trade.side === "BUY"
                               ? "bg-green-500/15 text-green-500"
-                              : "bg-danger/15 text-danger"
+                              : trade.side === "SELL"
+                                ? "bg-danger/15 text-danger"
+                                : "bg-surface-inset text-muted"
                           }`}
                         >
-                          {trade.side}
+                          {trade.side || "—"}
                         </span>
                       </td>
                       <td className="py-3 pr-4 text-sm">
                         {trade.outcome || "--"}
                       </td>
                       <td className="py-3 pr-4 font-mono text-sm">
-                        {trade.price != null
+                        {trade.price != null && trade.price > 0
                           ? `$${Number(trade.price).toFixed(2)}`
                           : "--"}
                       </td>
@@ -1371,13 +1518,28 @@ export default function LeaderProfilePage() {
                             ? trade.size.toLocaleString()
                             : "--"}
                       </td>
+                      <td className="py-3 pr-4">
+                        {result === "WIN" && (
+                          <span className="rounded px-2 py-0.5 text-xs font-bold bg-green-500/15 text-green-400">WIN</span>
+                        )}
+                        {result === "LOSS" && (
+                          <span className="rounded px-2 py-0.5 text-xs font-bold bg-danger/15 text-danger">LOSS</span>
+                        )}
+                        {result === "OPEN" && (
+                          <span className="rounded px-2 py-0.5 text-xs font-medium bg-blue-400/15 text-blue-400">OPEN</span>
+                        )}
+                        {result === "—" && (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
                       <td className="py-3">
                         <span className="rounded-full bg-surface-inset px-2.5 py-0.5 text-xs font-medium text-muted">
                           {trade.type || "TRADE"}
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

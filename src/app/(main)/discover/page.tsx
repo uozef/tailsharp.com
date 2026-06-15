@@ -306,20 +306,11 @@ export default function DiscoverPage() {
                 {/* Header */}
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
-                  {entry.profileImage ? (
-                    <Image
-                      src={entry.profileImage}
-                      alt={displayName(entry)}
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 rounded-full object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 text-sm font-bold text-blue-400">
-                      {getInitials(entry.userName)}
-                    </div>
-                  )}
+                  <img
+                    src={entry.profileImage || `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(entry.userName || entry.proxyWallet)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                    alt={displayName(entry)}
+                    className="h-12 w-12 rounded-full object-cover bg-surface-inset"
+                  />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
