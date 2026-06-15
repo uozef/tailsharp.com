@@ -10,10 +10,10 @@ const pages = [
 ];
 
 export default function LandingPage() {
-  const [active, setActive] = useState(4);
+  const [active, setActive] = useState(2);
   const [showPicker, setShowPicker] = useState(false);
 
-  const currentPage = pages.find((p) => p.id === active) ?? pages[3];
+  const currentPage = pages.find((p) => p.id === active) ?? pages[1];
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
