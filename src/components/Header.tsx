@@ -9,6 +9,7 @@ const pageTitles: Record<string, string> = {
   "/discover": "Discover Leaders",
   "/portfolio": "My Portfolio",
   "/account": "Account & Wallet",
+  "/intel": "Market Intelligence",
   "/risk": "Risk Monitor",
   "/live": "Live Leaderboard",
   "/pricing": "Pricing",
