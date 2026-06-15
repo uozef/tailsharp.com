@@ -60,7 +60,7 @@ export async function GET(request: Request) {
     const resolvedPos = posArray.filter(
       (p: any) => p.redeemable || p.curPrice === 0 || p.curPrice === 1
     );
-    const winningPos = resolvedPos.filter((p: any) => (p.cashPnl || 0) > 0);
+    const visibleWinningPos = resolvedPos.filter((p: any) => (p.cashPnl || 0) > 0);
 
     // PRIMARY DATA SOURCES (priority order):
     // 1. Leaderboard PnL/Vol — most accurate for ranked wallets
@@ -69,6 +69,28 @@ export async function GET(request: Request) {
     const totalPnl = lbMatch?.pnl ?? posPnl;
     const totalVolume = lbMatch?.vol ?? totalTradeVolume;
     const roi = totalVolume > 0 ? (totalPnl / totalVolume) * 100 : 0;
+
+    // Win rate estimation:
+    // Polymarket auto-redeems winning positions — they vanish from the positions API.
+    // So visible positions are biased toward losses. We estimate win rate by:
+    // 1. Counting visible resolved positions (mostly losses since wins are redeemed)
+    // 2. Estimating hidden (redeemed) winning positions from PnL gap
+    // If leaderboard PnL > sum of visible positions PnL, the difference = redeemed wins
+    const visiblePnl = posArray.reduce((s: number, p: any) => s + (p.cashPnl || 0), 0);
+    const hiddenWinPnl = totalPnl - visiblePnl; // PnL from auto-redeemed winning positions
+    const avgVisibleLoss = resolvedPos.length > 0
+      ? Math.abs(resolvedPos.reduce((s: number, p: any) => s + Math.min(0, p.cashPnl || 0), 0) / Math.max(1, resolvedPos.length))
+      : 0;
+    // Estimate number of hidden wins: assume avg win size ≈ avg visible position size
+    const avgPosSize = posArray.length > 0
+      ? posArray.reduce((s: number, p: any) => s + (p.initialValue || 0), 0) / posArray.length
+      : totalTradeVolume / Math.max(1, trades.length);
+    const estimatedHiddenWins = avgPosSize > 0 ? Math.max(0, Math.round(hiddenWinPnl / avgPosSize)) : 0;
+    const estimatedTotalPositions = posArray.length + estimatedHiddenWins;
+    const estimatedWins = visibleWinningPos.length + estimatedHiddenWins;
+    const estimatedWinRate = estimatedTotalPositions > 0
+      ? Math.round((estimatedWins / estimatedTotalPositions) * 100)
+      : null;
 
     // Market concentration
     const marketCounts: Record<string, number> = {};
@@ -124,13 +146,15 @@ export async function GET(request: Request) {
       positionsInvested: posInvested,
       positionsCurrentValue: posCurrentValue,
 
-      // Win rate (from resolved positions)
+      // Win rate (estimated — Polymarket auto-redeems wins, so positions API is biased)
+      visiblePositions: posArray.length,
       resolvedPositions: resolvedPos.length,
-      winningPositions: winningPos.length,
-      losingPositions: resolvedPos.length - winningPos.length,
-      winRate: resolvedPos.length > 0
-        ? Math.round((winningPos.length / resolvedPos.length) * 100)
-        : null,
+      visibleWins: visibleWinningPos.length,
+      estimatedHiddenWins: estimatedHiddenWins,
+      estimatedTotalPositions: estimatedTotalPositions,
+      winningPositions: estimatedWins,
+      losingPositions: estimatedTotalPositions - estimatedWins,
+      winRate: estimatedWinRate,
 
       // Activity stats
       totalTrades: trades.length,
