@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TailSharp — Copy Top Polymarket Traders",
-  description: "Discover, analyze, and copy the best Polymarket prediction market traders with smart risk management and Kelly Criterion sizing.",
+  title: "TailSharp — Prediction Market Data Intelligence",
+  description: "Identify persistent forecasting skill, quantify market risk, and discover alpha in prediction markets. Powered by the Sharpness Rating methodology.",
 };
 
 export default function RootLayout({

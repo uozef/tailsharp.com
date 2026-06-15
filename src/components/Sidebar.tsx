@@ -10,6 +10,7 @@ import {
   Wallet,
   ShieldAlert,
   Radio,
+  DollarSign,
   User,
   Menu,
   X,
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/account", label: "Account & Wallet", icon: Wallet },
   { href: "/risk", label: "Risk Monitor", icon: ShieldAlert },
   { href: "/live", label: "Live Data", icon: Radio },
+  { href: "/pricing", label: "Pricing", icon: DollarSign },
 ];
 
 interface SidebarProps {

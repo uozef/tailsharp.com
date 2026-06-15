@@ -9,7 +9,7 @@ export default function Footer() {
           <Image src="/tailsharp-icon.svg" alt="TailSharp" width={20} height={20} />
           <span className="font-semibold text-foreground">TailSharp</span>
           <span className="text-blue-400">&mdash;</span>
-          <span>Prediction Market Copy Trading</span>
+          <span>Prediction Market Data Intelligence</span>
         </div>
 
         <nav className="flex flex-wrap items-center gap-4 text-xs">

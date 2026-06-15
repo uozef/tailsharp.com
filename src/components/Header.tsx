@@ -11,6 +11,7 @@ const pageTitles: Record<string, string> = {
   "/account": "Account & Wallet",
   "/risk": "Risk Monitor",
   "/live": "Live Leaderboard",
+  "/pricing": "Pricing",
 };
 
 function getPageTitle(pathname: string): string {
