@@ -181,9 +181,9 @@ export default function DiscoverPage() {
   return (
     <div className="space-y-6">
       {/* Profile Any Wallet */}
-      <div className="rounded-2xl bg-[#1e293b] p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-white mb-3">Profile Any Wallet</h2>
-        <p className="text-xs text-slate-400 mb-3">
+      <div className="rounded-2xl bg-surface border border-card-border p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-foreground mb-3">Profile Any Wallet</h2>
+        <p className="text-xs text-muted mb-3">
           Paste a Polymarket profile URL or wallet address to analyze any trader
         </p>
         <div className="flex gap-2">
@@ -193,7 +193,7 @@ export default function DiscoverPage() {
             value={lookupInput}
             onChange={(e) => setLookupInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-            className="h-11 flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 text-sm text-white placeholder-slate-500 outline-none transition-colors focus:border-blue-400 focus:ring-1 focus:ring-blue-400 font-mono"
+            className="h-11 flex-1 rounded-xl border border-card-border bg-surface-inset px-4 text-sm text-foreground placeholder-muted outline-none transition-colors focus:border-blue-400 focus:ring-1 focus:ring-blue-400 font-mono"
           />
           <button
             onClick={handleLookup}
