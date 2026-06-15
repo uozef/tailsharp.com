@@ -64,7 +64,7 @@ export default function DashboardPage() {
 
   const chartData = useMemo(() => {
     return leaders.map((l) => ({
-      name: l.userName || l.proxyWallet.slice(0, 6),
+      name: (l.userName || l.proxyWallet.slice(0, 8)).slice(0, 14),
       pnl: l.pnl,
     }));
   }, [leaders]);
@@ -185,12 +185,13 @@ export default function DashboardPage() {
                   boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
                   backgroundColor: "var(--surface)",
                   color: "var(--foreground)",
+                  maxWidth: "280px",
                 }}
-                labelStyle={{ color: "var(--muted)" }}
+                labelStyle={{ color: "var(--foreground)", fontWeight: 600, fontSize: "13px" }}
                 itemStyle={{ color: "var(--foreground)" }}
-                cursor={{ fill: "var(--surface-inset)", opacity: 0.5 }}
+                cursor={{ fill: "var(--surface-inset)", opacity: 0.3 }}
                 formatter={(value) => [
-                  `$${Number(value).toLocaleString()}`,
+                  `$${Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
                   "PnL",
                 ]}
               />
