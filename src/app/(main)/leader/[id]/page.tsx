@@ -811,23 +811,27 @@ export default function LeaderProfilePage() {
             value: openPositions.toLocaleString(),
             icon: <Activity className="h-4 w-4" />,
             color: "text-foreground",
+            tab: "analysis" as const,
           },
           {
             label: "Total Positions",
             value: totalPositions.toLocaleString(),
             icon: <BarChart3 className="h-4 w-4" />,
             color: "text-foreground",
+            tab: "analysis" as const,
           },
           {
             label: "Trades",
             value: (analysis?.totalTrades ?? activity.length).toLocaleString(),
             icon: <Activity className="h-4 w-4" />,
             color: "text-foreground",
+            tab: "history" as const,
           },
         ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl bg-surface p-5 text-center shadow-sm"
+            onClick={() => { if ("tab" in stat && stat.tab) setActiveTab(stat.tab); }}
+            className={`rounded-xl bg-surface p-5 text-center shadow-sm ${"tab" in stat && stat.tab ? "cursor-pointer transition-colors hover:bg-surface-inset hover:ring-1 hover:ring-blue-400/30" : ""}`}
           >
             <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-surface-inset text-muted">
               {stat.icon}
