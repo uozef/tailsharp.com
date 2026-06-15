@@ -121,11 +121,12 @@ const MACRO_FACTORS = ["GDP", "Inflation", "Interest Rates", "Employment", "AUD/
 
 /* ─────────── Helpers ─────────── */
 
-function formatVolume(v: number): string {
-  if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${Math.round(v)}`;
+function formatVolume(v: unknown): string {
+  const n = Number(v) || 0;
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${Math.round(n)}`;
 }
 
 function timeUntil(dateStr: string): string {
@@ -683,7 +684,7 @@ export default function IntelPage() {
   const stats = useMemo(() => {
     const total = events.length;
     const highImpact = events.filter((e) => e.macro_impact === "High").length;
-    const totalVolume = events.reduce((s, e) => s + (e.volume || 0), 0);
+    const totalVolume = events.reduce((s, e) => s + (Number(e.volume) || 0), 0);
     const activeMarkets = events.reduce((s, e) => s + (e.markets?.length || 0), 0);
     return { total, highImpact, totalVolume, activeMarkets };
   }, [events]);
