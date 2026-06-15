@@ -240,12 +240,14 @@ function ScenarioPanel({ scenarios, onClose }: { scenarios: IntelScenario[]; onC
   const scenario = scenarios[activeTab];
 
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-blue-500/30 bg-[#0f172a] dark:bg-[#0c1322]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative max-h-[85vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-blue-500/30 bg-surface shadow-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-card-border px-5 py-3">
-        <h3 className="text-sm font-semibold text-foreground">What-If Scenarios</h3>
-        <button onClick={onClose} className="rounded p-1 text-muted hover:bg-surface-inset hover:text-foreground">
-          <X className="h-4 w-4" />
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-card-border bg-surface px-6 py-4">
+        <h3 className="text-base font-bold text-foreground">What-If Scenario Analysis</h3>
+        <button onClick={onClose} className="rounded-lg p-1.5 text-muted hover:bg-surface-inset hover:text-foreground">
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -262,7 +264,7 @@ function ScenarioPanel({ scenarios, onClose }: { scenarios: IntelScenario[]; onC
                   : "text-muted hover:bg-surface-inset hover:text-foreground"
               }`}
             >
-              {s.outcome} ({(s.probability * 100).toFixed(0)}%)
+              {s.outcome} ({s.probability > 1 ? s.probability.toFixed(0) : (s.probability * 100).toFixed(0)}%)
             </button>
           ))}
         </div>
@@ -274,7 +276,7 @@ function ScenarioPanel({ scenarios, onClose }: { scenarios: IntelScenario[]; onC
           <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted">Outcome</p>
           <p className="text-sm font-semibold text-foreground">
             {scenario.outcome}
-            <span className="ml-2 text-blue-400">({(scenario.probability * 100).toFixed(0)}%)</span>
+            <span className="ml-2 text-blue-400">({scenario.probability > 1 ? scenario.probability.toFixed(0) : (scenario.probability * 100).toFixed(0)}%)</span>
           </p>
         </div>
 
@@ -395,6 +397,7 @@ function ScenarioPanel({ scenarios, onClose }: { scenarios: IntelScenario[]; onC
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

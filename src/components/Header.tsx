@@ -10,6 +10,7 @@ const pageTitles: Record<string, string> = {
   "/portfolio": "My Portfolio",
   "/account": "Account & Wallet",
   "/intel": "Market Intelligence",
+  "/intel/scenarios": "Scenario Lab",
   "/risk": "Risk Monitor",
   "/live": "Live Leaderboard",
   "/pricing": "Pricing",
