@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TailSharp | Prediction Market Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background-color: #020617;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .text-gradient {
+            background: linear-gradient(to bottom right, #fff 30%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glow-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0);
+        }
+        .glow-button:hover {
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+        }
+        #ui-overlay {
+            pointer-events: none;
+        }
+        #ui-overlay a, #ui-overlay button {
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas Background -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-overlay" class="relative z-10 min-h-screen flex flex-col">
+        
+        <!-- Navigation -->
+        <nav class="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/50">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                </div>
+                <span class="font-extrabold text-xl tracking-tighter">TAIL<span class="text-blue-500">SHARP</span></span>
+            </div>
+            
+            <div class="hidden md:flex gap-8 text-sm font-medium text-slate-400">
+                <a href="/discover" class="hover:text-white transition">Platform</a>
+                <a href="/discover" class="hover:text-white transition">Pricing</a>
+                <a href="/discover" class="hover:text-white transition">Research</a>
+                <a href="/discover" class="hover:text-white transition">API</a>
+            </div>
+
+            <div class="flex items-center gap-4 font-medium">
+                <a href="/discover" class="text-sm text-slate-400 hover:text-white">Sign In</a>
+                <button class="glass px-5 py-2 rounded-full text-sm glow-button border-blue-500/30">Get Access</button>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <main class="flex-grow flex flex-col items-center justify-center px-4 text-center mt-[-5vh]">
+            <!-- Trust Badge -->
+            <div class="glass px-4 py-1.5 rounded-full text-[10px] uppercase tracking-[0.2em] font-bold text-blue-400 mb-8 border-blue-500/20 flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                Institutional Grade Intelligence
+            </div>
+
+            <h1 class="text-6xl md:text-8xl font-extrabold tracking-tight mb-6 leading-[1.1]">
+                <span class="text-gradient">Prediction Market</span><br/>
+                <span class="italic font-light">Intelligence, Decoded.</span>
+            </h1>
+
+            <p class="max-w-2xl text-slate-400 text-lg md:text-xl leading-relaxed mb-10">
+                The first platform to separate skill from luck. Powered by the <span class="text-white font-semibold underline decoration-blue-500 decoration-2 underline-offset-4">Sharpness Rating</span> — identifying persistent forecasting edge on Polymarket.
+            </p>
+
+            <div class="flex flex-col md:flex-row gap-4">
+                <button class="bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-xl font-bold text-lg shadow-xl shadow-blue-600/20 glow-button flex items-center gap-3">
+                    Start Analyzing 
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </button>
+                <button class="glass px-10 py-4 rounded-xl font-bold text-lg hover:bg-white/5 transition-all">
+                    View Methodology
+                </button>
+            </div>
+
+            <!-- Dashboard Preview Hint -->
+            <div class="mt-20 glass rounded-t-3xl w-full max-w-5xl h-32 border-b-0 opacity-40 flex items-center justify-center overflow-hidden">
+                <div class="grid grid-cols-4 gap-8 w-full px-12">
+                    <div class="h-4 bg-white/10 rounded-full w-full"></div>
+                    <div class="h-4 bg-white/10 rounded-full w-full"></div>
+                    <div class="h-4 bg-white/10 rounded-full w-full"></div>
+                    <div class="h-4 bg-white/10 rounded-full w-full"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- THREE.JS BACKGROUND ---
+        let scene, camera, renderer, particles;
+        const particleCount = 2000;
+        let mouseX = 0, mouseY = 0;
+
+        function init3D() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Create a Grid of "Data Nodes"
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                // Distribute in a large thin volume
+                positions[i * 3] = (Math.random() - 0.5) * 20;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+
+                // Blue/Cyan Color Palette
+                colors[i * 3] = 0.2; // R
+                colors[i * 3 + 1] = 0.5 + Math.random() * 0.5; // G
+                colors[i * 3 + 2] = 1.0; // B
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.03,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            // Add a subtle grid floor
+            const gridHelper = new THREE.GridHelper(40, 40, 0x1e293b, 0x0f172a);
+            gridHelper.position.y = -4;
+            scene.add(gridHelper);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            particles.rotation.y += 0.001;
+            particles.rotation.x += 0.0005;
+
+            // Mouse parallax effect
+            camera.position.x += (mouseX - camera.position.x) * 0.05;
+            camera.position.y += (-mouseY - camera.position.y) * 0.05;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        // --- INTERACTION & ANIMATION ---
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // GSAP Entrances
+        gsap.from("nav", { y: -50, opacity: 0, duration: 1, ease: "power4.out" });
+        gsap.from("h1", { y: 30, opacity: 0, duration: 1.2, delay: 0.2, ease: "power4.out" });
+        gsap.from("p", { y: 20, opacity: 0, duration: 1, delay: 0.4, ease: "power4.out" });
+        gsap.from(".glow-button", { scale: 0.9, opacity: 0, duration: 0.8, delay: 0.6, ease: "back.out(1.7)" });
+
+        init3D();
+    </script>
+</body>
+</html>

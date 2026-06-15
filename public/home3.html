@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TailSharp | Extracting Gold from Market Noise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --gold: #fbbf24; 
+            --gold-glow: rgba(251, 191, 36, 0.4);
+            --blue-noise: #1e40af; 
+        }
+        body { margin: 0; background: #020617; color: white; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        
+        .gold-gradient {
+            background: linear-gradient(135deg, #fff 30%, #fbbf24 60%, #92400e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .gold-border {
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.1);
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        canvas { position: fixed; top: 0; left: 0; z-index: 0; }
+
+        /* Cinematic flare */
+        .flare {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 50vw; height: 50vw;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.08) 0%, transparent 70%);
+            pointer-events: none; z-index: 1;
+        }
+
+        .btn-gold {
+            background: linear-gradient(to bottom, #fbbf24, #d97706);
+            box-shadow: 0 4px 20px rgba(217, 119, 6, 0.4);
+            transition: all 0.3s ease;
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(217, 119, 6, 0.6); }
+    </style>
+</head>
+<body>
+
+    <div class="flare"></div>
+    <div id="canvas-container"></div>
+
+    <div class="relative z-10 flex flex-col min-h-screen">
+        
+        <!-- Top Navigation -->
+        <nav class="flex items-center justify-between px-10 py-8">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 gold-border rounded-lg flex items-center justify-center bg-black">
+                    <svg class="w-6 h-6 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11 4a1 1 0 10-2 0v4a1 1 0 102 0V7zm-3 1a1 1 0 10-2 0v3a1 1 0 102 0V8zM8 9a1 1 0 00-2 0v2a1 1 0 102 0V9z" clip-rule="evenodd"></path></svg>
+                </div>
+                <span class="text-2xl font-bold tracking-tighter">TAIL<span class="text-yellow-500">SHARP</span></span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-10 text-sm font-medium text-slate-400">
+                <a href="/discover" class="hover:text-yellow-500 transition">Intelligence Core</a>
+                <a href="/discover" class="hover:text-yellow-500 transition">The Sharpness Rating</a>
+                <a href="/discover" class="hover:text-yellow-500 transition">Research</a>
+            </div>
+
+            <button class="glass-panel gold-border px-6 py-2 rounded-full text-sm font-bold text-yellow-500 hover:bg-yellow-500/10 transition">
+                Terminal Login
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow flex flex-col items-center justify-center px-6 text-center">
+            
+            <!-- Dynamic Extraction Badge -->
+            <div class="glass-panel gold-border px-5 py-2 rounded-full text-[10px] font-black tracking-[0.4em] uppercase text-yellow-500 mb-8 flex items-center gap-4">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                </span>
+                Refining 1.2B Points / Min
+            </div>
+
+            <h1 class="text-7xl md:text-[8rem] font-bold tracking-tighter leading-[0.85] mb-10">
+                <span class="gold-gradient">Gold.</span><br/>
+                <span class="text-white">Extracted from Noise.</span>
+            </h1>
+
+            <p class="max-w-2xl text-slate-400 text-lg md:text-xl leading-relaxed mb-12">
+                We process billions of on-chain data points to find the <span class="text-yellow-500 font-bold">"Gold"</span>—the persistent, skill-based edge hidden within Polymarket's chaotic noise. 
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-6">
+                <button class="btn-gold text-black px-12 py-5 rounded-2xl font-black text-xl flex items-center gap-3">
+                    Claim Your Edge
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                </button>
+                <button class="glass-panel px-12 py-5 rounded-2xl font-bold text-xl border-white/10 hover:border-yellow-500/50 transition-all">
+                    View Methodology
+                </button>
+            </div>
+        </main>
+
+        <!-- Live Refinement Dashboard -->
+        <footer class="p-10">
+            <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-panel gold-border p-6 rounded-2xl">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Raw Data (Blue Noise)</div>
+                    <div class="text-3xl font-mono text-blue-400" id="raw-counter">4,129,583,102</div>
+                </div>
+                <div class="glass-panel gold-border p-6 rounded-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2"><div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div></div>
+                    <div class="text-xs font-bold text-yellow-600 uppercase tracking-widest mb-2">Refined Intel (Gold)</div>
+                    <div class="text-3xl font-mono text-yellow-500" id="gold-counter">842.09 MB</div>
+                </div>
+                <div class="glass-panel gold-border p-6 rounded-2xl">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Sharpness Accuracy</div>
+                    <div class="text-3xl font-mono text-white">99.982%</div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- DATA COUNTERS ---
+        let raw = 4129583102;
+        let gold = 842.09;
+        setInterval(() => {
+            raw += Math.floor(Math.random() * 100000);
+            gold += Math.random() * 0.05;
+            document.getElementById('raw-counter').innerText = raw.toLocaleString();
+            document.getElementById('gold-counter').innerText = gold.toFixed(2) + " MB";
+        }, 100);
+
+        // --- THREE.JS EXTRACTION VORTEX ---
+        let scene, camera, renderer, noiseParticles, goldParticles;
+        const noiseCount = 4000;
+        const goldCount = 800;
+
+        function init3D() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // 1. NOISE PARTICLES (Blue, Chaotic)
+            const noiseGeo = new THREE.BufferGeometry();
+            const noisePos = new Float32Array(noiseCount * 3);
+            for (let i = 0; i < noiseCount; i++) {
+                noisePos[i*3] = (Math.random() - 0.5) * 15;
+                noisePos[i*3+1] = (Math.random() - 0.5) * 15;
+                noisePos[i*3+2] = (Math.random() - 0.5) * 15;
+            }
+            noiseGeo.setAttribute('position', new THREE.BufferAttribute(noisePos, 3));
+            const noiseMat = new THREE.PointsMaterial({ color: 0x1e40af, size: 0.02, transparent: true, opacity: 0.4 });
+            noiseParticles = new THREE.Points(noiseGeo, noiseMat);
+            scene.add(noiseParticles);
+
+            // 2. GOLD PARTICLES (The Extraction Stream)
+            const goldGeo = new THREE.BufferGeometry();
+            const goldPos = new Float32Array(goldCount * 3);
+            const goldVel = new Float32Array(goldCount);
+            for (let i = 0; i < goldCount; i++) {
+                goldPos[i*3] = (Math.random() - 0.5) * 2;
+                goldPos[i*3+1] = (Math.random() - 0.5) * 2;
+                goldPos[i*3+2] = Math.random
