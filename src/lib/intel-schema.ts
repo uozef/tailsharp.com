@@ -87,6 +87,21 @@ CREATE TABLE IF NOT EXISTS intel_sync_log (
   completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )`;
 
+const CREATE_LEADS = `
+CREATE TABLE IF NOT EXISTS leads (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  email VARCHAR(200) NOT NULL,
+  company VARCHAR(200),
+  role VARCHAR(200),
+  tier VARCHAR(50),
+  message TEXT,
+  source VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_email (email),
+  INDEX idx_created (created_at DESC)
+)`;
+
 export async function initSchema(): Promise<void> {
   const statements = [
     CREATE_INTEL_EVENTS,
@@ -94,6 +109,7 @@ export async function initSchema(): Promise<void> {
     CREATE_INTEL_PRICE_HISTORY,
     CREATE_INTEL_SCENARIOS,
     CREATE_INTEL_SYNC_LOG,
+    CREATE_LEADS,
   ];
 
   for (const sql of statements) {

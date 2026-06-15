@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   AreaChart, Area, XAxis, YAxis, ReferenceLine, ReferenceDot,
   ResponsiveContainer, CartesianGrid, Tooltip,
@@ -68,12 +68,180 @@ const C = {
 };
 const MUTED = "#90A6C2";
 
+/* ---- Lead capture modal ---- */
+function DemoModal({ open, onClose, preselectedTier }: { open: boolean; onClose: () => void; preselectedTier: string }) {
+  const [form, setForm] = useState({ name: "", email: "", company: "", role: "", tier: preselectedTier, message: "" });
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Sync preselected tier when it changes
+  useEffect(() => {
+    if (preselectedTier) setForm((f) => ({ ...f, tier: preselectedTier }));
+  }, [preselectedTier]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      setStatus("idle");
+      setErrorMsg("");
+    }
+  }, [open]);
+
+  const set = (field: string, value: string) => setForm((f) => ({ ...f, [field]: value }));
+
+  const submit = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      setErrorMsg("Name and email are required.");
+      return;
+    }
+    setStatus("sending");
+    setErrorMsg("");
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, source: "pricing-page" }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to submit");
+      setStatus("success");
+    } catch (e: any) {
+      setErrorMsg(e.message);
+      setStatus("error");
+    }
+  };
+
+  if (!open) return null;
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", borderRadius: 9, border: `1px solid ${C.line}`,
+    background: C.panel, color: C.text, fontSize: 14, fontFamily: "'Inter', system-ui, sans-serif",
+    outline: "none",
+  };
+  const labelStyle: React.CSSProperties = { fontSize: 12, color: C.muted, marginBottom: 4, display: "block" };
+
+  return (
+    <div ref={overlayRef} onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 16,
+      }}>
+      <div id="demo" style={{
+        background: C.panel2, border: `1px solid ${C.gold}`, borderRadius: 18,
+        padding: "28px 26px", maxWidth: 460, width: "100%",
+        boxShadow: "0 20px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(212,175,55,.15)",
+        maxHeight: "90vh", overflowY: "auto",
+      }}>
+        {status === "success" ? (
+          <div style={{ textAlign: "center", padding: "30px 0" }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>&#10003;</div>
+            <div className="tsmono" style={{ fontSize: 22, fontWeight: 700, color: C.gold, marginBottom: 8 }}>
+              Thank you!
+            </div>
+            <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.6 }}>
+              Our team will reach out within 24 hours.<br />
+              We look forward to showing you the edge.
+            </p>
+            <button onClick={onClose} className="tsbtn" style={{
+              marginTop: 20, padding: "10px 28px", borderRadius: 10,
+              background: C.gold, color: C.bg, fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer",
+            }}>
+              Close
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+              <div>
+                <div className="tsmono" style={{ fontSize: 20, fontWeight: 700, color: C.text }}>Book a Demo</div>
+                <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
+                  Tell us about your needs and our team will set up a personalized walkthrough.
+                </p>
+              </div>
+              <button onClick={onClose} style={{
+                background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer",
+                padding: "0 0 0 12px", lineHeight: 1,
+              }}>&times;</button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={labelStyle}>Full Name *</label>
+                <input style={inputStyle} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Jane Smith" />
+              </div>
+              <div>
+                <label style={labelStyle}>Work Email *</label>
+                <input style={inputStyle} type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="jane@hedgefund.com" />
+              </div>
+              <div>
+                <label style={labelStyle}>Company Name</label>
+                <input style={inputStyle} value={form.company} onChange={(e) => set("company", e.target.value)} placeholder="Acme Capital" />
+              </div>
+              <div>
+                <label style={labelStyle}>Role / Title</label>
+                <input style={inputStyle} value={form.role} onChange={(e) => set("role", e.target.value)} placeholder="Portfolio Manager" />
+              </div>
+              <div>
+                <label style={labelStyle}>Which tier are you interested in?</label>
+                <select style={{ ...inputStyle, cursor: "pointer" }} value={form.tier} onChange={(e) => set("tier", e.target.value)}>
+                  <option value="">-- Select --</option>
+                  {TIERS.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name} — ${t.price}/mo</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Message / What are you looking for?</label>
+                <textarea style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={form.message}
+                  onChange={(e) => set("message", e.target.value)}
+                  placeholder="Tell us about your use case..." />
+              </div>
+
+              {errorMsg && (
+                <div style={{ fontSize: 13, color: "#f87171", background: "rgba(248,113,113,.08)", padding: "8px 12px", borderRadius: 8 }}>
+                  {errorMsg}
+                </div>
+              )}
+
+              <button onClick={submit} disabled={status === "sending"} className="tsbtn"
+                style={{
+                  width: "100%", padding: "13px 0", borderRadius: 10, border: "none",
+                  background: status === "sending" ? C.goldDim : C.gold,
+                  color: C.bg, fontSize: 15, fontWeight: 700, cursor: status === "sending" ? "wait" : "pointer",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}>
+                {status === "sending" ? "Submitting..." : "Book Demo"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TailSharpPricing() {
   const [tierId, setTierId] = useState("edge");
   const [events, setEvents] = useState(1200);     // edge-events / month
   const [freshKey, setFreshKey] = useState("fast");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTier, setModalTier] = useState("edge");
 
   const tier = tierById(tierId)!;
+
+  // Open modal if URL has #demo
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#demo") {
+      setModalOpen(true);
+    }
+  }, []);
+
+  const openDemo = (selectedTier?: string) => {
+    setModalTier(selectedTier || tierId);
+    setModalOpen(true);
+  };
 
   // freshness allowed by the selected tier's floor
   const allowed = (fk: string) => FRESHNESS[fk].tierRank <= tier.rank;
@@ -111,7 +279,7 @@ export default function TailSharpPricing() {
   const money = (n: number) => "$" + n.toLocaleString("en-AU", { maximumFractionDigits: 0 });
 
   return (
-    <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", padding: "32px 22px", minHeight: "100vh" }}>
+    <div style={{ background: C.bg, color: C.text, fontFamily: "'Inter', system-ui, sans-serif", padding: "32px 22px 100px", minHeight: "100vh" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
         .tsmono { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; }
@@ -212,6 +380,18 @@ export default function TailSharpPricing() {
               <div style={{ fontSize: 11, color: C.muted, marginTop: 10 }}>
                 Overage ${t.overage.toFixed(2)}/ticket
               </div>
+              {/* CTA Button */}
+              <button onClick={(e) => { e.stopPropagation(); openDemo(t.id); }} className="tsbtn"
+                style={{
+                  width: "100%", marginTop: 14, padding: "11px 0", borderRadius: 10,
+                  border: active ? "none" : `1px solid ${C.gold}`,
+                  background: active ? C.gold : "transparent",
+                  color: active ? C.bg : C.gold,
+                  fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  fontFamily: "'Space Grotesk', sans-serif",
+                }}>
+                {t.id === "scout" ? "Get Started" : "Book a Demo"}
+              </button>
             </div>
           );
         })}
@@ -288,6 +468,26 @@ export default function TailSharpPricing() {
       <div style={{ maxWidth: 1040, margin: "14px auto 0", fontSize: 11, color: C.muted, textAlign: "center" }}>
         Illustrative economics. Half-life, ticket weights and overage rates are tunable inputs, not committed prices.
       </div>
+
+      {/* ---------- FLOATING BOOK A DEMO BUTTON ---------- */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 1000,
+        background: `linear-gradient(transparent, ${C.bg} 30%)`,
+        padding: "30px 0 18px", display: "flex", justifyContent: "center",
+      }}>
+        <button onClick={() => openDemo()} className="tsbtn tsmono"
+          style={{
+            padding: "14px 40px", borderRadius: 12, border: "none",
+            background: C.gold, color: C.bg, fontSize: 16, fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(212,175,55,.35)",
+          }}>
+          Book a Demo
+        </button>
+      </div>
+
+      {/* ---------- DEMO MODAL ---------- */}
+      <DemoModal open={modalOpen} onClose={() => setModalOpen(false)} preselectedTier={modalTier} />
     </div>
   );
 }
