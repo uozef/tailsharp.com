@@ -7,6 +7,7 @@ const pages = [
   { id: 2, label: "Billion-Scale Terminal", src: "/home2.html" },
   { id: 3, label: "Gold Standard", src: "/home3.html" },
   { id: 4, label: "Institutional Flow", src: "/home4.html" },
+  { id: 5, label: "Latest Design", src: "/home5.html" },
 ];
 
 export default function LandingPage() {

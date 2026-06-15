@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TailSharp | Predictive Intelligence Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@300;500;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #F59E0B; --bg: #010409; --slate: #64748B; }
+        body { margin: 0; background-color: var(--bg); color: white; font-family: 'Space Grotesk', sans-serif; overflow: hidden; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        #canvas-container { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+        .ui-layer { position: relative; z-index: 10; min-height: 100vh; display: flex; flex-direction: column; }
+
+        .glass { background: rgba(1, 4, 9, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.03); }
+        .gold-border { border-left: 2px solid var(--gold); }
+        
+        .hero-text {
+            background: linear-gradient(180deg, #FFFFFF 0%, #94A3B8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 0.9;
+        }
+
+        .btn-core {
+            position: relative;
+            background: white;
+            color: black;
+            font-weight: 800;
+            padding: 1.25rem 2.5rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+        .btn-core:hover { background: var(--gold); transform: scale(1.05); }
+
+        /* Data Grid Background Decor */
+        .grid-lines {
+            position: fixed; inset: 0;
+            background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 40px 40px;
+            z-index: 2; pointer-events: none;
+        }
+
+        .status-tag {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-lines"></div>
+    <div id="canvas-container"></div>
+
+    <div class="ui-layer">
+        
+        <!-- Header -->
+        <nav class="flex items-center justify-between px-10 py-8">
+            <div class="flex items-center gap-4">
+                <!-- Institutional SVG Logo -->
+                <svg width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 18L21 11L31 18" stroke="#F59E0B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M11 26L21 19L31 26" stroke="white" stroke-opacity="0.2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M11 33L21 26L31 33" stroke="white" stroke-opacity="0.1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <div class="flex flex-col">
+                    <span class="text-2xl font-extrabold tracking-tighter uppercase">Tail<span class="text-amber-500">Sharp</span></span>
+                    <span class="mono text-[8px] text-slate-500 uppercase tracking-[0.4em]">Proprietary Data Systems</span>
+                </div>
+            </div>
+            
+            <div class="hidden lg:flex items-center gap-10 mono text-[10px] font-bold">
+                <div class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> <span class="text-slate-400">INGESTING:</span> 1.2B PKTS/M</div>
+                <a href="/discover" class="text-slate-400 hover:text-white transition uppercase tracking-widest">Connectivity</a>
+                <a href="/discover" class="text-slate-400 hover:text-white transition uppercase tracking-widest">Methodology</a>
+            </div>
+
+            <button class="mono text-[11px] font-bold border border-white/10 px-6 py-2 hover:bg-white hover:text-black transition uppercase">
+                Terminal Login
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow flex flex-col items-center justify-center px-6 text-center">
+            
+            <div class="status-tag mono text-amber-500 font-bold mb-8">
+                CORE STATUS: EXTRACTING SIGNAL
+            </div>
+
+            <h1 class="hero-text text-7xl md:text-[9.5rem] font-extrabold tracking-tighter mb-10">
+                Foresight,<br/>Engineered.
+            </h1>
+
+            <p class="max-w-2xl text-slate-400 text-lg md:text-2xl leading-relaxed mb-16 font-light">
+                TailSharp deciphers the <span class="text-white font-medium">Predictive Asymmetry</span> within global markets. We isolate high-conviction informed flow to deliver institutional edge at sub-millisecond speeds.
+            </p>
+
+            <div class="flex flex-col md:flex-row gap-6 items-center">
+                <button class="btn-core text-sm uppercase tracking-widest">
+                    Request API Access
+                </button>
+                <div class="h-12 w-[1px] bg-white/10 hidden md:block"></div>
+                <div class="text-left">
+                    <div class="mono text-[10px] text-slate-500 uppercase tracking-widest mb-1">Signal Fidelity</div>
+                    <div class="text-xl font-bold italic tracking-tighter text-amber-500">Tier-1 Institutional</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Real-Time Data Footer -->
+        <footer class="p-10 flex flex-col md:flex-row justify-between items-end">
+            
+            <!-- Live Intel Feed -->
+            <div class="glass p-5 rounded-sm border-l-2 border-amber-500 w-full md:w-80">
+                <div class="flex justify-between mono text-[9px] text-slate-500 mb-4 tracking-[0.2em]">
+                    <span>ALPHA_DETECTOR_V4</span>
+                    <span class="text-amber-500">RUNNING</span>
+                </div>
+                <div class="space-y-2 mono text-[10px]">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 italic">Target Flow:</span>
+                        <span class="text-white font-bold">0x71a...FE3</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400 italic">Sharpness:</span>
+                        <span class="text-amber-500 font-bold">9.84/10.0</span>
+                    </div>
+                    <div class="flex justify-between pt-2 border-t border-white/5">
+                        <span class="text-slate-400 italic">Action:</span>
+                        <span class="text-green-500 font-bold">SIGNAL ISOLATED</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-right mt-8 md:mt-0">
+                <div class="mono text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-2">
+                    Delivered via Secure WebSocket & FIX
+                </div>
+                <div class="text-xs text-slate-400 font-light">
+                    © 2024 TailSharp Intelligence Group. All Rights Reserved.
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- THREE.JS: THE NEURAL FLUX FIELD ---
+        let scene, camera, renderer, particles;
+        const particleCount = 12000;
+
+        function init3D() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                // Random sphere distribution
+                const r = 10;
+                positions[i*3] = (Math.random() - 0.5) * r * 2;
+                positions[i*3+1] = (Math.random() - 0.5) * r * 2;
+                positions[i*3+2] = (Math.random() - 0.5) * r;
+
+                // Set colors (mostly blue-ish slate noise)
+                colors[i*3] = 0.2; // R
+                colors[i*3+1] = 0.3; // G
+                colors[i*3+2] = 0.4; // B
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.015,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const posArr = particles.geometry.attributes.position.array;
+            const colArr = particles.geometry.attributes.color.array;
+            const time = Date.now() * 0.001;
+
+            for (let i = 0; i < particleCount; i++) {
+                // 1. Chaotic Drift (Noise)
+                posArr[i*3] += Math.sin(time + i) * 0.002;
+                posArr[i*3+1] += Math.cos(time + i) * 0.002;
+
+                // 2. The Extraction Vortex (The Signal)
+                // Particles near the vertical center align into a golden stream
+                const x = posArr[i*3];
+                const distanceToCenter = Math.abs(x);
+
+                if (distanceToCenter < 0.8) {
+                    // Turn Gold
+                    colArr[i*3] = 0.96; // R (Amber)
+                    colArr[i*3+1] = 0.62; // G
+                    colArr[i*3+2] = 0.04; // B
+                    
+                    // Accelerate along Z axis
+                    posArr[i*3+2] += 0.08;
+                } else {
+                    // Return to Muted Blue
+                    colArr[i*3] = 0.15;
+                    colArr[i*3+1] = 0.2;
+                    colArr[i*3+2] = 0.3;
+                    // Slow drift
+                    posArr[i*3+2] += 0.005;
+                }
+
+                // Recycle particles
+                if (posArr[i*3+2] > 5) {
+                    posArr[i*3+2] = -10;
+                    posArr[i*3] = (Math.random() - 0.5) * 15;
+                    posArr[i*3+1] = (Math.random() - 0.5) * 15;
+                }
+            }
+
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.geometry.attributes.color.needsUpdate = true;
+            
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Entrance GSAP
+        gsap.from(".hero-text", { y: 100, opacity: 0, duration: 1.5, ease: "power4.out" });
+        gsap.from("nav", { y: -50, opacity: 0, duration: 1, delay: 0.5 });
+        gsap.from("footer", { y: 50, opacity: 0, duration: 1, delay: 1 });
+
+        init3D();
+    </script>
+</body>
+</html>
