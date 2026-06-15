@@ -186,6 +186,8 @@ export default function DashboardPage() {
                   backgroundColor: "var(--surface)",
                   color: "var(--foreground)",
                 }}
+                labelStyle={{ color: "var(--muted)" }}
+                itemStyle={{ color: "var(--foreground)" }}
                 cursor={{ fill: "var(--surface-inset)", opacity: 0.5 }}
                 formatter={(value) => [
                   `$${Number(value).toLocaleString()}`,
