@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 const DATA_API = "https://data-api.polymarket.com";
 
-/** Fetch complete wallet profile: leaderboard rank, positions, value, and activity */
+/** Fetch complete wallet profile from multiple Polymarket data sources */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,103 +13,139 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "wallet required" }, { status: 400 });
 
     // Fetch all data sources in parallel
-    const [lbRes, posRes, valRes, actRes] = await Promise.all([
+    const [lbRes, posRes, valRes, actRes1, actRes2] = await Promise.all([
       fetch(`${DATA_API}/v1/leaderboard?limit=500`).catch(() => null),
       fetch(`${DATA_API}/positions?user=${wallet}&sizeThreshold=0`).catch(() => null),
       fetch(`${DATA_API}/value?user=${wallet}`).catch(() => null),
       fetch(`${DATA_API}/activity?user=${wallet}&limit=500&offset=0`).catch(() => null),
+      fetch(`${DATA_API}/activity?user=${wallet}&limit=500&offset=500`).catch(() => null),
     ]);
 
-    // Parse responses
     const leaderboard = lbRes?.ok ? await lbRes.json() : [];
     const positions = posRes?.ok ? await posRes.json() : [];
     const valueData = valRes?.ok ? await valRes.json() : [];
-    const activity = actRes?.ok ? await actRes.json() : [];
+    const act1 = actRes1?.ok ? await actRes1.json() : [];
+    const act2 = actRes2?.ok ? await actRes2.json() : [];
+    const activity = [
+      ...(Array.isArray(act1) ? act1 : []),
+      ...(Array.isArray(act2) ? act2 : []),
+    ];
 
-    // Find rank
+    // Find in leaderboard
     const lbMatch = Array.isArray(leaderboard)
       ? leaderboard.find(
           (e: any) => e.proxyWallet?.toLowerCase() === wallet.toLowerCase()
         )
       : null;
 
-    // Compute aggregates from positions (the source of truth)
+    // Positions data (only shows current/unredeemed — NOT full history)
     const posArray = Array.isArray(positions) ? positions : [];
-    const totalInvested = posArray.reduce(
-      (s: number, p: any) => s + (p.initialValue || 0),
-      0
-    );
-    const totalCurrentValue = posArray.reduce(
-      (s: number, p: any) => s + (p.currentValue || 0),
-      0
-    );
-    const totalCashPnl = posArray.reduce(
-      (s: number, p: any) => s + (p.cashPnl || 0),
-      0
-    );
-    const totalVolume = posArray.reduce(
-      (s: number, p: any) => s + (p.totalBought || 0) * (p.avgPrice || 0),
-      0
-    );
-
-    const winningPositions = posArray.filter((p: any) => (p.cashPnl || 0) > 0);
-    const losingPositions = posArray.filter((p: any) => (p.cashPnl || 0) < 0);
-    const resolvedPositions = posArray.filter(
-      (p: any) => p.redeemable || p.currentValue === 0 || p.curPrice === 0 || p.curPrice === 1
-    );
     const openPositions = posArray.filter(
       (p: any) => !p.redeemable && p.currentValue > 0 && p.curPrice > 0 && p.curPrice < 1
     );
+    const posInvested = posArray.reduce((s: number, p: any) => s + (p.initialValue || 0), 0);
+    const posPnl = posArray.reduce((s: number, p: any) => s + (p.cashPnl || 0), 0);
+    const posCurrentValue = posArray.reduce((s: number, p: any) => s + (p.currentValue || 0), 0);
 
     const portfolioValue =
-      Array.isArray(valueData) && valueData.length > 0
-        ? valueData[0].value || 0
-        : 0;
+      Array.isArray(valueData) && valueData.length > 0 ? valueData[0].value || 0 : 0;
 
-    // Activity stats
-    const actArray = Array.isArray(activity) ? activity : [];
-    const trades = actArray.filter((a: any) => a.type === "TRADE");
+    // Activity-based stats (more complete than positions for historical view)
+    const trades = activity.filter((a: any) => a.type === "TRADE");
+    const buys = trades.filter((t: any) => t.side === "BUY");
+    const sells = trades.filter((t: any) => t.side === "SELL");
+    const totalTradeVolume = trades.reduce((s: number, t: any) => s + (t.usdcSize || 0), 0);
+
+    // Compute win metrics from resolved positions
+    const resolvedPos = posArray.filter(
+      (p: any) => p.redeemable || p.curPrice === 0 || p.curPrice === 1
+    );
+    const winningPos = resolvedPos.filter((p: any) => (p.cashPnl || 0) > 0);
+
+    // PRIMARY DATA SOURCES (priority order):
+    // 1. Leaderboard PnL/Vol — most accurate for ranked wallets
+    // 2. Activity trade volume — computed from actual trades
+    // 3. Positions — only current/unredeemed, not full history
+    const totalPnl = lbMatch?.pnl ?? posPnl;
+    const totalVolume = lbMatch?.vol ?? totalTradeVolume;
+    const roi = totalVolume > 0 ? (totalPnl / totalVolume) * 100 : 0;
+
+    // Market concentration
+    const marketCounts: Record<string, number> = {};
+    for (const t of trades) {
+      const key = t.title || "Unknown";
+      marketCounts[key] = (marketCounts[key] || 0) + 1;
+    }
+    const uniqueMarkets = Object.keys(marketCounts).length;
+    const topMarkets = Object.entries(marketCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([title, count]) => ({ title, count }));
+
+    // Trading frequency
+    const timestamps = trades.map((t: any) => t.timestamp).filter(Boolean);
+    let tradesPerDay = 0;
+    let tradingDays = 0;
+    if (timestamps.length > 1) {
+      const minTs = Math.min(...timestamps);
+      const maxTs = Math.max(...timestamps);
+      tradingDays = Math.max(1, Math.round((maxTs - minTs) / 86400));
+      tradesPerDay = timestamps.length / tradingDays;
+    }
+
+    // Avg trade size
+    const avgTradeSize = trades.length > 0 ? totalTradeVolume / trades.length : 0;
+
+    // Display name resolution
+    const displayName =
+      lbMatch?.userName ||
+      (activity.length > 0 ? activity[0].name || activity[0].pseudonym : null) ||
+      null;
 
     const profile = {
       wallet,
-      displayName:
-        lbMatch?.userName ||
-        (actArray.length > 0 ? actArray[0].name || actArray[0].pseudonym : null) ||
-        null,
-      profileImage: lbMatch?.profileImage || (actArray.length > 0 ? actArray[0].profileImage : "") || "",
+      displayName,
+      profileImage: lbMatch?.profileImage || (activity.length > 0 ? activity[0].profileImage : "") || "",
       verified: lbMatch?.verifiedBadge || false,
       xUsername: lbMatch?.xUsername || "",
 
-      // Rank
+      // Rank (from leaderboard)
       rank: lbMatch ? parseInt(lbMatch.rank) : null,
-      leaderboardPnl: lbMatch?.pnl || null,
-      leaderboardVol: lbMatch?.vol || null,
 
-      // Portfolio (from positions API — accurate)
-      totalPositions: posArray.length,
-      openPositions: openPositions.length,
-      resolvedPositions: resolvedPositions.length,
-      winningPositions: winningPositions.length,
-      losingPositions: losingPositions.length,
-      totalInvested,
-      totalCurrentValue,
-      totalCashPnl,
+      // Core metrics (leaderboard is source of truth when available)
+      totalPnl,
+      totalVolume,
+      roi,
+
+      // Portfolio snapshot
       portfolioValue,
-      winRate:
-        resolvedPositions.length > 0
-          ? Math.round(
-              (winningPositions.length / resolvedPositions.length) * 100
-            )
-          : null,
-      roi: totalInvested > 0 ? (totalCashPnl / totalInvested) * 100 : 0,
+      currentPositions: posArray.length,
+      openPositions: openPositions.length,
+      positionsInvested: posInvested,
+      positionsCurrentValue: posCurrentValue,
 
-      // Activity summary
+      // Win rate (from resolved positions)
+      resolvedPositions: resolvedPos.length,
+      winningPositions: winningPos.length,
+      losingPositions: resolvedPos.length - winningPos.length,
+      winRate: resolvedPos.length > 0
+        ? Math.round((winningPos.length / resolvedPos.length) * 100)
+        : null,
+
+      // Activity stats
       totalTrades: trades.length,
-      totalActivityRecords: actArray.length,
+      totalActivityRecords: activity.length,
+      buyCount: buys.length,
+      sellCount: sells.length,
+      avgTradeSize,
+      tradesPerDay: Math.round(tradesPerDay * 10) / 10,
+      tradingDays,
+      uniqueMarkets,
+      topMarkets,
 
       // Raw data for charts
-      positions: posArray.slice(0, 200), // top 200 positions
-      recentActivity: actArray.slice(0, 200), // recent 200 trades
+      positions: posArray,
+      recentActivity: activity,
     };
 
     return NextResponse.json(profile);

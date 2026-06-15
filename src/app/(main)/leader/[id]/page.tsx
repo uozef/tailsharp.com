@@ -130,21 +130,27 @@ export default function LeaderProfilePage() {
     verified: boolean;
     xUsername: string;
     rank: number | null;
-    leaderboardPnl: number | null;
-    leaderboardVol: number | null;
-    totalPositions: number;
+    totalPnl: number;
+    totalVolume: number;
+    roi: number;
+    portfolioValue: number;
+    currentPositions: number;
     openPositions: number;
+    positionsInvested: number;
+    positionsCurrentValue: number;
     resolvedPositions: number;
     winningPositions: number;
     losingPositions: number;
-    totalInvested: number;
-    totalCurrentValue: number;
-    totalCashPnl: number;
-    portfolioValue: number;
     winRate: number | null;
-    roi: number;
     totalTrades: number;
     totalActivityRecords: number;
+    buyCount: number;
+    sellCount: number;
+    avgTradeSize: number;
+    tradesPerDay: number;
+    tradingDays: number;
+    uniqueMarkets: number;
+    topMarkets: { title: string; count: number }[];
     positions: any[];
     recentActivity: TradeActivity[];
   }
@@ -261,17 +267,17 @@ export default function LeaderProfilePage() {
     };
   }, [activity]);
 
-  /* ---- Computed stats (from profile API — positions-based, accurate) ---- */
+  /* ---- Computed stats (from profile API — leaderboard + positions + activity) ---- */
   const displayName = profile?.displayName || truncateWallet(walletAddress);
   const profileImage = profile?.profileImage || "";
-  const totalVolume = profile?.leaderboardVol || profile?.totalInvested || 0;
-  const totalPnl = profile?.leaderboardPnl ?? profile?.totalCashPnl ?? 0;
-  const roi = profile?.roi ?? (totalVolume > 0 ? (totalPnl / totalVolume) * 100 : 0);
+  const totalVolume = profile?.totalVolume ?? 0;
+  const totalPnl = profile?.totalPnl ?? 0;
+  const roi = profile?.roi ?? 0;
   const rank = profile?.rank ?? null;
   const winRate = profile?.winRate ?? null;
   const portfolioValue = profile?.portfolioValue ?? 0;
   const openPositions = profile?.openPositions ?? 0;
-  const totalPositions = profile?.totalPositions ?? 0;
+  const totalPositions = profile?.currentPositions ?? 0;
 
   /* ---- Side distribution chart data ---- */
   const sideData = useMemo(() => {
@@ -772,7 +778,7 @@ export default function LeaderProfilePage() {
         {[
           {
             label: "Total Invested",
-            value: formatUsd(profile?.totalInvested ?? 0),
+            value: formatUsd(totalVolume),
             icon: <DollarSign className="h-4 w-4" />,
             color: "text-foreground",
           },
