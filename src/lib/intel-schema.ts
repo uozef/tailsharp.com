@@ -87,6 +87,70 @@ CREATE TABLE IF NOT EXISTS intel_sync_log (
   completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )`;
 
+const CREATE_NEWS_SOURCES = `
+CREATE TABLE IF NOT EXISTS news_sources (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  url VARCHAR(500),
+  type VARCHAR(50),
+  category VARCHAR(100),
+  reliability_score INT DEFAULT 50,
+  scan_interval_sec INT DEFAULT 600,
+  last_scanned TIMESTAMP NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_active (active),
+  INDEX idx_category (category)
+)`;
+
+const CREATE_NEWS_ITEMS = `
+CREATE TABLE IF NOT EXISTS news_items (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  source_id BIGINT,
+  title VARCHAR(1000) NOT NULL,
+  content TEXT,
+  url VARCHAR(1000),
+  published_at TIMESTAMP NULL,
+  category VARCHAR(100),
+  sentiment VARCHAR(20),
+  impact_score INT DEFAULT 0,
+  related_markets JSON,
+  processed BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_source (source_id),
+  INDEX idx_processed (processed),
+  INDEX idx_impact (impact_score DESC),
+  INDEX idx_created (created_at DESC),
+  FOREIGN KEY (source_id) REFERENCES news_sources(id) ON DELETE SET NULL
+)`;
+
+const CREATE_TRADING_SIGNALS = `
+CREATE TABLE IF NOT EXISTS trading_signals (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  news_item_id BIGINT,
+  event_id VARCHAR(20),
+  market_id VARCHAR(20),
+  market_question VARCHAR(1000),
+  direction VARCHAR(10),
+  current_price DECIMAL(5,4),
+  fair_value DECIMAL(5,4),
+  edge DECIMAL(5,4),
+  confidence INT DEFAULT 0,
+  suggested_size DECIMAL(20,2),
+  potential_pnl DECIMAL(20,2),
+  rationale TEXT,
+  status VARCHAR(20) DEFAULT 'pending',
+  expires_at TIMESTAMP NULL,
+  accepted_at TIMESTAMP NULL,
+  executed_at TIMESTAMP NULL,
+  execution_price DECIMAL(5,4) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_status (status),
+  INDEX idx_confidence (confidence DESC),
+  INDEX idx_created (created_at DESC),
+  FOREIGN KEY (news_item_id) REFERENCES news_items(id) ON DELETE SET NULL
+)`;
+
 const CREATE_LEADS = `
 CREATE TABLE IF NOT EXISTS leads (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -109,6 +173,9 @@ export async function initSchema(): Promise<void> {
     CREATE_INTEL_PRICE_HISTORY,
     CREATE_INTEL_SCENARIOS,
     CREATE_INTEL_SYNC_LOG,
+    CREATE_NEWS_SOURCES,
+    CREATE_NEWS_ITEMS,
+    CREATE_TRADING_SIGNALS,
     CREATE_LEADS,
   ];
 
