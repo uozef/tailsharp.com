@@ -510,23 +510,58 @@ export default function SignalsPage() {
     return () => clearInterval(id);
   }, []);
 
-  /* Fetch data */
+  /* Fetch data from real API */
   const fetchData = useCallback(async () => {
     try {
-      // In production these would be real API calls:
-      // const [sigRes, newsRes, srcRes] = await Promise.all([
-      //   fetch("/api/signals?status=pending"),
-      //   fetch("/api/signals/news?limit=20"),
-      //   fetch("/api/signals/sources"),
-      // ]);
-      // Simulate with mock data:
-      await new Promise((r) => setTimeout(r, 600));
-      setSignals(MOCK_SIGNALS);
-      setNews(MOCK_NEWS);
-      setSources(MOCK_SOURCES);
+      const [sigRes, newsRes, srcRes] = await Promise.all([
+        fetch("/api/signals").then(r => r.ok ? r.json() : []),
+        fetch("/api/signals/news?limit=20").then(r => r.ok ? r.json() : []),
+        fetch("/api/signals/sources").then(r => r.ok ? r.json() : []),
+      ]);
+      // Map API response to UI types
+      const mappedSignals: Signal[] = (Array.isArray(sigRes) ? sigRes : []).map((s: any) => ({
+        id: String(s.id),
+        marketQuestion: s.market_question || s.marketQuestion || "Unknown",
+        direction: (s.direction === "YES" ? "BUY_YES" : "BUY_NO") as Direction,
+        currentPrice: Number(s.current_price ?? s.currentPrice ?? 0),
+        fairValue: Number(s.fair_value ?? s.fairValue ?? 0),
+        edge: Number(s.edge ?? 0) * 100,
+        confidence: Number(s.confidence ?? 0),
+        suggestedSize: Number(s.suggested_size ?? s.suggestedSize ?? 0),
+        potentialPnl: Number(s.potential_pnl ?? s.potentialPnl ?? 0),
+        rationale: s.rationale || "",
+        expiresAt: s.expires_at || s.expiresAt || new Date(Date.now() + 30 * 60000).toISOString(),
+        status: (s.status || "pending") as SignalStatus,
+        pnl: s.pnl ? Number(s.pnl) : undefined,
+        executedPrice: s.execution_price ? Number(s.execution_price) : undefined,
+        createdAt: s.created_at || s.createdAt || new Date().toISOString(),
+      }));
+      const mappedNews: NewsItem[] = (Array.isArray(newsRes) ? newsRes : []).map((n: any) => ({
+        id: String(n.id),
+        source: n.source_name || n.source || "Unknown",
+        sourceReliability: Number(n.reliability_score ?? n.sourceReliability ?? 50),
+        title: n.title || "",
+        category: n.category || "general",
+        sentiment: (n.sentiment || "neutral") as "bullish" | "bearish" | "neutral",
+        impactScore: Number(n.impact_score ?? n.impactScore ?? 0),
+        timestamp: n.created_at || n.published_at || n.timestamp || new Date().toISOString(),
+        relatedMarkets: n.related_markets_count ?? (n.related_markets ? JSON.parse(typeof n.related_markets === 'string' ? n.related_markets : '[]').length : 0),
+      }));
+      const mappedSources: MonitoredSource[] = (Array.isArray(srcRes) ? srcRes : []).map((s: any) => ({
+        id: String(s.id),
+        name: s.name || "Unknown",
+        type: (s.type || "website") as any,
+        category: s.category || "general",
+        reliability: Number(s.reliability_score ?? s.reliability ?? 50),
+        lastScanned: s.last_scanned || s.lastScanned || "",
+        active: Boolean(s.active),
+      }));
+      setSignals(mappedSignals);
+      setNews(mappedNews);
+      setSources(mappedSources);
       setLastScanned(new Date().toISOString());
-    } catch {
-      // handle error
+    } catch (err) {
+      console.error("Failed to fetch signals data:", err);
     } finally {
       setLoading(false);
     }
@@ -544,10 +579,11 @@ export default function SignalsPage() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      // POST /api/signals
-      await new Promise((r) => setTimeout(r, 1500));
+      await fetch("/api/signals", { method: "POST" });
       setLastScanned(new Date().toISOString());
       await fetchData();
+    } catch (err) {
+      console.error("Scan failed:", err);
     } finally {
       setScanning(false);
     }
@@ -557,37 +593,46 @@ export default function SignalsPage() {
   const handleAction = async (id: string, action: "accept" | "reject") => {
     setActionLoading((prev) => ({ ...prev, [id]: true }));
     try {
-      // PATCH /api/signals/{id} with { action }
-      await new Promise((r) => setTimeout(r, 500));
-      setSignals((prev) =>
-        prev.map((s) =>
-          s.id === id
-            ? { ...s, status: action === "accept" ? "accepted" : "rejected" }
-            : s
-        )
-      );
+      const res = await fetch(`/api/signals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        setSignals((prev) =>
+          prev.map((s) =>
+            s.id === id
+              ? { ...s, status: (action === "accept" ? "accepted" : "rejected") as SignalStatus }
+              : s
+          )
+        );
+      }
+    } catch (err) {
+      console.error("Action failed:", err);
     } finally {
       setActionLoading((prev) => ({ ...prev, [id]: false }));
     }
   };
 
-  /* Execute */
+  /* Execute — re-checks viability first */
   const handleExecute = async (id: string) => {
     setActionLoading((prev) => ({ ...prev, [id]: true }));
     try {
-      // PATCH /api/signals/{id} with { action: "execute" }
-      await new Promise((r) => setTimeout(r, 800));
+      const res = await fetch(`/api/signals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "execute" }),
+      });
+      const data = await res.json();
       const signal = signals.find((s) => s.id === id);
       if (!signal) return;
 
-      // Simulate viability check
-      const viable = Math.random() > 0.3;
-      if (viable) {
-        const execPrice = signal.currentPrice + (Math.random() * 0.02 - 0.01);
+      if (data.viable !== false && data.status !== "expired") {
+        const execPrice = data.execution_price || signal.currentPrice;
         const edgeCaptured = ((signal.fairValue - execPrice) * 100).toFixed(1);
         setExecuteResult((prev) => ({
           ...prev,
-          [id]: `Signal executed at $${execPrice.toFixed(2)} \u2014 edge captured: ${edgeCaptured}%`,
+          [id]: `Signal executed at $${Number(execPrice).toFixed(2)} \u2014 edge captured: ${edgeCaptured}%`,
         }));
         setSignals((prev) =>
           prev.map((s) =>

@@ -458,8 +458,90 @@ export async function getSignals(status?: string): Promise<any[]> {
 
 export async function getNewsItems(limit = 50): Promise<any[]> {
   const [rows] = await pool.execute(
-    `SELECT * FROM news_items ORDER BY created_at DESC LIMIT ?`,
-    [limit],
+    `SELECT n.*, s.name as source_name, s.reliability_score FROM news_items n LEFT JOIN news_sources s ON n.source_id = s.id ORDER BY n.created_at DESC LIMIT ${Math.min(limit, 200)}`,
   );
   return rows as any[];
+}
+
+/**
+ * Smart auto-allocation: rank signals by edge × resolution speed.
+ * Markets that resolve sooner with higher edge get bigger allocations.
+ * This maximizes capital velocity (money generation speed).
+ */
+export async function autoAllocateSignals(
+  bankroll: number = 10000,
+  maxPerSignal: number = 0.25, // max 25% of bankroll per signal
+): Promise<any[]> {
+  // Get all pending signals with market end dates
+  const [rows] = await pool.execute(
+    `SELECT ts.*, im.end_date, im.volume as market_volume, im.liquidity
+     FROM trading_signals ts
+     LEFT JOIN intel_markets im ON ts.market_id = im.id
+     WHERE ts.status = 'pending' AND (ts.expires_at IS NULL OR ts.expires_at > NOW())
+     ORDER BY ts.confidence DESC`
+  );
+  const signals = rows as any[];
+  if (!signals.length) return [];
+
+  // Score each signal: edge% × (1 / days_to_resolution) × confidence
+  // Higher score = better capital velocity opportunity
+  const scored = signals.map((s: any) => {
+    const edge = Math.abs(Number(s.edge) || 0);
+    const confidence = Number(s.confidence) || 50;
+    const endDate = s.end_date ? new Date(s.end_date) : null;
+    const daysToResolution = endDate
+      ? Math.max(0.5, (endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : 30; // default 30 days if unknown
+    const liquidity = Number(s.liquidity) || 1000;
+
+    // Capital velocity score: how fast can this edge turn into profit?
+    // edge * (1/days) * confidence/100 = expected daily return per dollar
+    const velocityScore = (edge * (1 / daysToResolution) * (confidence / 100));
+
+    // Kelly fraction: edge * confidence - simplified
+    const kellyFraction = Math.max(0, edge * (confidence / 100) - (1 - confidence / 100) * 0.5);
+    const kellyBet = Math.min(bankroll * maxPerSignal, bankroll * kellyFraction);
+
+    // Cap by market liquidity (don't try to bet more than 5% of liquidity)
+    const liquidityCap = liquidity * 0.05;
+    const allocatedSize = Math.min(kellyBet, liquidityCap, bankroll * maxPerSignal);
+    const potentialPnl = allocatedSize * edge;
+
+    return {
+      ...s,
+      daysToResolution: Math.round(daysToResolution * 10) / 10,
+      velocityScore: Math.round(velocityScore * 10000) / 10000,
+      allocatedSize: Math.round(allocatedSize * 100) / 100,
+      potentialPnl: Math.round(potentialPnl * 100) / 100,
+      annualizedReturn: Math.round((edge * (365 / daysToResolution) * (confidence / 100)) * 10000) / 100,
+    };
+  });
+
+  // Sort by velocity score descending (highest capital velocity first)
+  scored.sort((a: any, b: any) => b.velocityScore - a.velocityScore);
+
+  // Allocate from bankroll — greedy by velocity
+  let remaining = bankroll;
+  const allocated = [];
+  for (const s of scored) {
+    if (remaining <= 0) break;
+    const size = Math.min(s.allocatedSize, remaining);
+    if (size < 10) continue; // skip tiny allocations
+    allocated.push({
+      ...s,
+      allocatedSize: Math.round(size * 100) / 100,
+      potentialPnl: Math.round(size * Math.abs(Number(s.edge) || 0) * 100) / 100,
+    });
+    remaining -= size;
+  }
+
+  // Update suggested_size in DB for allocated signals
+  for (const s of allocated) {
+    await pool.execute(
+      `UPDATE trading_signals SET suggested_size = ?, potential_pnl = ? WHERE id = ?`,
+      [s.allocatedSize, s.potentialPnl, s.id]
+    );
+  }
+
+  return allocated;
 }
