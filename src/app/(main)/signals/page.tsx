@@ -67,9 +67,9 @@ interface MonitoredSource {
   active: boolean;
 }
 
-/* ───────────────────────── Mock Data ───────────────────────── */
+/* ───────────────────────── (mock data removed — real API only) ── */
 
-const MOCK_SIGNALS: Signal[] = [
+const _REMOVED_MOCK_SIGNALS: Signal[] = [
   {
     id: "sig-001",
     marketQuestion: "Will Bitcoin exceed $150,000 by December 2026?",
@@ -810,14 +810,14 @@ export default function SignalsPage() {
                     <ConfidenceBar value={sig.confidence} />
                   </div>
 
-                  {/* Size + P&L */}
-                  <div className="mb-3 flex gap-4">
+                  {/* Size + P&L + ROI + Capacity */}
+                  <div className="mb-3 grid grid-cols-4 gap-3">
                     <div>
                       <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
                         Suggested Size
                       </p>
                       <p className="text-sm font-semibold text-foreground font-mono">
-                        ${sig.suggestedSize}
+                        ${sig.suggestedSize.toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -826,6 +826,22 @@ export default function SignalsPage() {
                       </p>
                       <p className="text-sm font-semibold text-emerald-400 font-mono">
                         {formatUsd(sig.potentialPnl)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                        ROI
+                      </p>
+                      <p className="text-sm font-semibold text-amber-400 font-mono">
+                        {sig.suggestedSize > 0 ? `+${((sig.potentialPnl / sig.suggestedSize) * 100).toFixed(1)}%` : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+                        Capacity
+                      </p>
+                      <p className="text-sm font-semibold text-blue-400 font-mono">
+                        {sig.edge > 0 ? `$${Math.round(sig.suggestedSize / 0.25).toLocaleString()}` : "—"}
                       </p>
                     </div>
                   </div>
