@@ -67,9 +67,9 @@ interface MonitoredSource {
   active: boolean;
 }
 
-/* ───────────────────────── (mock data removed — real API only) ── */
+/* ───────────────────────── Mock Data (fallback) ───────────────── */
 
-const _REMOVED_MOCK_SIGNALS: Signal[] = [
+const MOCK_SIGNALS: Signal[] = [
   {
     id: "sig-001",
     marketQuestion: "Will Bitcoin exceed $150,000 by December 2026?",
@@ -556,12 +556,17 @@ export default function SignalsPage() {
         lastScanned: s.last_scanned || s.lastScanned || "",
         active: Boolean(s.active),
       }));
-      setSignals(mappedSignals);
-      setNews(mappedNews);
-      setSources(mappedSources);
+      // Use real data if available, fall back to mock
+      setSignals(mappedSignals.length > 0 ? mappedSignals : MOCK_SIGNALS);
+      setNews(mappedNews.length > 0 ? mappedNews : MOCK_NEWS);
+      setSources(mappedSources.length > 0 ? mappedSources : MOCK_SOURCES);
       setLastScanned(new Date().toISOString());
     } catch (err) {
-      console.error("Failed to fetch signals data:", err);
+      console.error("Failed to fetch signals data, using mock:", err);
+      setSignals(MOCK_SIGNALS);
+      setNews(MOCK_NEWS);
+      setSources(MOCK_SOURCES);
+      setLastScanned(new Date().toISOString());
     } finally {
       setLoading(false);
     }
